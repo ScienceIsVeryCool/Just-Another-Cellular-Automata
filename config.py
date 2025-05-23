@@ -30,6 +30,13 @@ class Config:
     MUTATION_RATE = 0.01
     MAX_GENOME_LENGTH = 500
     
+    # Cell stacking limit
+    MAX_CELLS_PER_LOCATION = 1  # Prevent cell stacking exploitation
+    
+    # Statistics
+    STATS_HISTORY_SIZE = 1000  # How many ticks of history to keep
+    STATS_UPDATE_INTERVAL = 10  # Update stats every N ticks for performance
+    
     # Logging
     LOG_LEVEL = logging.DEBUG  # Change to INFO, WARNING, or ERROR as needed
     LOG_TO_FILE = True
@@ -75,6 +82,7 @@ class Config:
         logging.getLogger('food').setLevel(cls.LOG_LEVEL)
         logging.getLogger('renderer').setLevel(cls.LOG_LEVEL)
         logging.getLogger('main').setLevel(cls.LOG_LEVEL)
+        logging.getLogger('stats').setLevel(cls.LOG_LEVEL)
         
         logger.info("Logging system initialized")
         logger.debug(f"Log level set to: {logging.getLevelName(cls.LOG_LEVEL)}")

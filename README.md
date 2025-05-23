@@ -1,5 +1,16 @@
 # Cellular Evolution Simulator
 
+A sophisticated artificial life simulation featuring evolving organisms with genetic traits, comprehensive statistics tracking, and real-time visualization.
+
+## Features
+
+- **Genetic Evolution**: Organisms with DNA-based traits that mutate and evolve
+- **Energy Economy**: Food spawning, consumption, and energy management
+- **Comprehensive Statistics**: Track population dynamics, genome diversity, and evolution patterns
+- **Real-time Visualization**: Watch organisms interact, move, eat, and reproduce
+- **Stats Dashboard**: Toggle between simulation view and detailed statistics
+- **Cell Stacking Prevention**: Prevents exploitation strategies through position limits
+
 ## Setup
 ```bash
 pip install pygame numpy scipy
@@ -12,188 +23,195 @@ python main.py world_file.json    # Load saved world
 ```
 
 ## Controls
-- **SPACE** - Pause/unpause
+
+### Simulation Controls
+- **SPACE** - Pause/unpause simulation
 - **S** - Save world (when paused)
-- **R/F** - Zoom in/out  
-- **Mouse drag** - Pan camera
+- **T** - Toggle statistics view
+
+### Camera Controls
+- **R/F** - Zoom in/out (keyboard)
+- **Mouse Scroll** - Zoom in/out
+- **Middle Click** - Reset zoom to 1.0
+- **Left Click + Drag** - Pan camera
+- **F11** - Toggle fullscreen mode
 
 ## DNA Traits
-- `[Cell]` - Required base trait
-- `[CanMove]` - Allows movement
-- `[CanEat]` - Can consume food/cells
-- `[Color:X]` - Visual color (Red/Blue/Green/Yellow/Purple)
+- `[Cell]` - Required base trait for all organisms
+- `[CanMove]` - Allows organism movement (costs energy)
+- `[CanEat]` - Can consume food and other cells
+- `[Color:X]` - Visual color options:
+  - Green (default)
+  - Blue
+  - Red
+  - Yellow
+  - Purple
 
-## File Structure
-- `main.py` - Entry point & game loop
-- `world.py` - World simulation logic
-- `cell.py` - Cell & organism classes
-- `dna.py` - Genome parsing & mutation
-- `food.py` - Food spawning & regeneration
-- `renderer.py` - Pygame visualization
-- `config.py` - All constants
+## Energy System
+- **Starting Energy**: 200 - genome length
+- **Energy Drain**: Every 30 ticks (1 second at 30 FPS)
+- **Movement Cost**: 1 energy per move
+- **Reproduction**: Requires 250+ energy, costs 80
+- **Food Value**: 25 energy per food item
+- **Cell Death**: Leaves 15 energy as food
 
-## World Files
-Saved worlds are JSON with:
-- Organism positions & genomes
-- Food locations
-- Wall positions
+## Statistics View
 
-Energy = Starting energy - genome length. Each character costs 1 energy/tick.
+Press **T** to toggle the comprehensive statistics dashboard showing:
 
-## Tips
-- Shorter genomes = more efficient
-- `[CanMove]` helps find food
-- `[CanEat]` allows predation
-- Food regenerates near existing food (Conway rules)
+### Overview
+- Runtime and performance metrics
+- Current tick and tick rate
+- Population summaries
 
-# Cellular Evolution Simulator - Logging Guide
+### Population Dynamics
+- Real-time cell, organism, and food counts
+- Genome diversity tracking
+- Extinction monitoring
 
-## Overview
+### Life Events
+- Birth/death rates and totals
+- Mutation frequency
+- Reproduction success rates
 
-The cellular evolution simulator now includes comprehensive logging using Python's built-in `logging` module. The system provides multiple log levels and outputs to both console and file.
+### Visualizations
+- Population history graph
+- Trait distribution
+- Top performing genomes
+- Notable events log
 
-## Log Levels
-
-### ERROR
-- Critical errors that may cause the application to fail
-- Failed file operations, initialization errors
-- Always shown in console output
-
-### WARNING  
-- Non-critical issues that don't stop execution
-- Invalid genomes, failed spawn attempts, missing organisms
-- Shown in console by default
-
-### INFO
-- Important events and state changes
-- Organism births/deaths, world loading/saving, major milestones
-- Shown in console by default
-
-### DEBUG
-- Detailed execution information
-- Individual cell movements, energy changes, mutation details
-- Only saved to log files by default (not shown in console)
+### Advanced Metrics
+- Energy economy analysis
+- Spatial distribution heatmaps
+- Movement patterns
+- Genome evolution tracking
 
 ## Configuration
 
-Edit `config.py` to customize logging behavior:
+Edit `config.py` to customize:
 
-```python
-# Logging settings in config.py
-LOG_LEVEL = logging.DEBUG     # Change to INFO, WARNING, or ERROR
-LOG_TO_FILE = True           # Set to False to disable file logging
+### World Settings
+- `WORLD_WIDTH/HEIGHT`: World dimensions (default: 1024x1024)
+- `SCREEN_WIDTH/HEIGHT`: Display size (default: 800x600)
+- `MAX_CELLS_PER_LOCATION`: Cell stacking limit (default: 1)
+
+### Energy Parameters
+- `STARTING_ENERGY`: Base energy for new organisms
+- `ENERGY_DRAIN_INTERVAL`: Ticks between energy drain
+- `FOOD_ENERGY`: Energy gained from food
+- `FOOD_REGEN_RATE`: Food regeneration probability
+
+### Statistics
+- `STATS_HISTORY_SIZE`: History buffer size
+- `STATS_UPDATE_INTERVAL`: Update frequency
+
+## File Structure
+```
+├── main.py          # Entry point & game loop
+├── world.py         # World simulation logic
+├── cell.py          # Cell & organism classes
+├── dna.py           # Genome parsing & mutation
+├── food.py          # Food spawning & regeneration
+├── renderer.py      # Visualization & stats display
+├── stats.py         # Statistics tracking system
+├── config.py        # Configuration constants
+└── logs/            # Simulation logs
 ```
 
-## Log Output Locations
+## World Files
 
-### Console Output
-- Shows INFO, WARNING, and ERROR messages by default
-- Real-time feedback during simulation
-- Clean, readable format for monitoring
+Saved worlds are JSON files containing:
+- Organism positions and genomes
+- Food locations and energy values
+- Wall positions
+- Statistics snapshot at save time
 
-### File Output
-- All log levels including DEBUG
-- Saved to `logs/simulation_YYYYMMDD_HHMMSS.log`
-- Detailed information for debugging and analysis
-- Automatically creates `logs/` directory if needed
-
-## Key Logging Features Added
-
-### Main Simulation (`main.py`)
-- Startup and shutdown events
-- World loading/saving operations
-- User input and camera controls
-- Periodic status updates every 100 ticks
-- Performance monitoring every 1000 ticks
-
-### World Management (`world.py`)
-- Organism spawning and death
-- Cell reproduction and mutation
-- Energy system tracking
-- Spatial hash operations
-- Environment setup and loading
-
-### DNA System (`dna.py`)
-- Genome parsing and validation
-- Mutation events with before/after comparisons
-- Trait extraction and validation
-- Invalid genome detection
-
-### Food System (`food.py`)
-- Food spawning and consumption
-- Gaussian cluster generation
-- Conway-rule regeneration cycles
-- Out-of-bounds prevention
-
-### Rendering (`renderer.py`)
-- Render performance and object counts
-- Camera movement and zoom changes
-- Display initialization
-- Error handling for graphics operations
-
-### Cell/Organism (`cell.py`)
-- Object creation and initialization
-- Color extraction from traits
-- Entity relationship logging
-
-## Usage Examples
-
-### Running with Different Log Levels
-
-```bash
-# Normal operation (INFO level to console, DEBUG to file)
-python main.py
-
-# Only see warnings and errors in console
-# Edit config.py: LOG_LEVEL = logging.WARNING
-python main.py
-
-# Maximum verbosity (all DEBUG messages to console)
-# Edit config.py: LOG_LEVEL = logging.DEBUG, then change console_handler level
-python main.py
+Example structure:
+```json
+{
+  "width": 1024,
+  "height": 1024,
+  "organisms": [...],
+  "food": {...},
+  "walls": [...],
+  "stats_snapshot": {...}
+}
 ```
 
-### Monitoring Specific Events
+## Gameplay Tips
 
-Watch the console for key events:
-- `INFO` - Organism births, deaths, world saves
-- `WARNING` - Failed spawns, invalid genomes
-- `ERROR` - Critical failures, file errors
+### Survival Strategies
+- Shorter genomes are more energy-efficient
+- `[CanMove]` helps find food but costs energy
+- `[CanEat]` allows predation on other cells
+- Balance traits for different ecological niches
 
-Check log files for detailed analysis:
-- Individual cell movements and energy changes
-- Detailed mutation information
-- Performance metrics and timing data
+### Evolution Patterns
+- Food clusters create population centers
+- Walls create geographic isolation
+- Predators control population growth
+- Colors help track lineages visually
 
-### Debugging Issues
+### Statistics Analysis
+- Monitor genome diversity for healthy evolution
+- Track energy economy for system balance
+- Watch for mass extinction events
+- Identify successful trait combinations
 
-1. Check console for immediate problems (ERROR/WARNING)
-2. Examine log files for detailed DEBUG information
-3. Look for patterns in organism behavior
-4. Monitor energy flow and population dynamics
+## Logging
 
-## Log File Analysis
+The simulator includes comprehensive logging:
 
-Log files contain structured information perfect for:
-- Analyzing evolution patterns
-- Debugging simulation issues
-- Performance optimization
-- Research data collection
+### Log Levels
+- **ERROR**: Critical failures
+- **WARNING**: Non-critical issues
+- **INFO**: Important events
+- **DEBUG**: Detailed execution info
 
-Example log entries:
-```
-2025-05-22 10:30:15 - world - INFO - Organism 42 reproduced -> Organism 43 at (150, 200)
-2025-05-22 10:30:15 - dna - INFO - Insert mutation: '[Cell][CanMove]' -> '[Cell][CanMove][CanEat]' (added '[CanEat]')
-2025-05-22 10:30:16 - world - DEBUG - Cell 85 moved from (149, 200) to (150, 200)
-```
+### Log Locations
+- Console: INFO and above
+- Files: All levels in `logs/simulation_YYYYMMDD_HHMMSS.log`
 
-## Customization
+### Key Logged Events
+- Organism births/deaths with locations
+- Mutations with before/after genomes
+- Population milestones
+- Performance metrics
+- Energy economy changes
 
-To modify logging behavior:
+## Technical Details
 
-1. **Change console verbosity**: Edit `console_handler.setLevel()` in `config.py`
-2. **Add new log categories**: Create logger instances in new modules
-3. **Custom formatting**: Modify `LOG_FORMAT` in `config.py`
-4. **Disable file logging**: Set `LOG_TO_FILE = False`
+### Spatial Optimization
+- Spatial hashing for efficient collision detection
+- Grid size: 16x16 cells per hash bucket
 
-The logging system is designed to be comprehensive yet performant, providing insights into every aspect of the simulation while maintaining good performance for real-time operation.
+### Performance
+- Stats update every 10 ticks for efficiency
+- Configurable FPS (default: 30)
+- Energy drain interval reduces computation
+
+### Mutation System
+- Point mutations: 70% chance
+- Trait insertion: 20% chance
+- Trait deletion: 10% chance
+- Mutation rate: 1% per reproduction
+
+## Future Enhancements
+
+Potential additions:
+- Multicellular organisms
+- Environmental factors (temperature, seasons)
+- Neural network brains
+- Sexual reproduction
+- Resource types beyond food
+- Territorial behaviors
+- Communication traits
+
+## Contributing
+
+Feel free to fork and submit pull requests. Key areas for contribution:
+- New trait types
+- Performance optimizations
+- Additional statistics
+- Visualization improvements
+- Save/load enhancements

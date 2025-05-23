@@ -8,7 +8,13 @@ logger = logging.getLogger('dna')
 class DNAParser:
     def __init__(self):
         self.trait_pattern = re.compile(r'\[([^\]]+)\]')
+        self.stats = None  # Will be set if stats tracking is enabled
         logger.debug("DNAParser initialized with trait pattern")
+    
+    def set_stats_tracker(self, stats):
+        """Set the statistics tracker"""
+        self.stats = stats
+        logger.debug("Statistics tracker linked to DNA parser")
     
     def parse(self, genome):
         """Parse genome string into traits list"""
@@ -60,15 +66,34 @@ class DNAParser:
             new_genome = ''.join(chars)
             
             logger.info(f"Point mutation: '{genome}' -> '{new_genome}' (position {pos}: '{old_char}' -> '{chars[pos]}')")
+            
+            # Record mutation in stats if available
+            if self.stats and new_genome != genome:
+                self.stats.tick_mutations += 1
+                self.stats.total_mutations += 1
+            
             return new_genome
         
         elif mutation_type == 'insert':
             # Insert a trait
-            new_traits = ["[CanMove]", "[CanEat]", "[Color:Red]", "[Color:Blue]"]
+            new_traits = [
+                "[CanMove]", 
+                "[CanEat]", 
+                "[Color:Red]", 
+                "[Color:Blue]", 
+                "[Color:Yellow]",
+                "[Color:Purple]"
+            ]
             trait = random.choice(new_traits)
             new_genome = genome + trait
             
             logger.info(f"Insert mutation: '{genome}' -> '{new_genome}' (added '{trait}')")
+            
+            # Record mutation in stats if available
+            if self.stats:
+                self.stats.tick_mutations += 1
+                self.stats.total_mutations += 1
+            
             return new_genome
         
         else:  # delete
@@ -88,4 +113,10 @@ class DNAParser:
             new_genome = genome.replace(f"[{remove}]", "", 1)
             
             logger.info(f"Delete mutation: '{genome}' -> '{new_genome}' (removed '[{remove}]')")
+            
+            # Record mutation in stats if available
+            if self.stats:
+                self.stats.tick_mutations += 1
+                self.stats.total_mutations += 1
+            
             return new_genome

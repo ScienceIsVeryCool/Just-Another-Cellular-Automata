@@ -6,6 +6,7 @@ import logging
 from datetime import datetime
 from world import World
 from renderer import Renderer
+from stats import SimulationStats
 from config import Config
 
 # Setup logging before any other imports
@@ -29,6 +30,10 @@ class Simulation:
         self.paused = False
         self.tick = 0
         logger.debug("Simulation state variables initialized")
+        
+        # Initialize statistics tracker
+        self.stats = SimulationStats(Config.STATS_HISTORY_SIZE)
+        logger.info("Statistics tracker initialized")
         
         # Load or create world
         try:
@@ -55,6 +60,9 @@ class Simulation:
         except Exception as e:
             logger.error(f"Failed to load world: {e}")
             raise
+        
+        # Link stats tracker to world
+        self.world.set_stats_tracker(self.stats)
         
         try:
             self.renderer = Renderer(Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT)
@@ -121,7 +129,8 @@ class Simulation:
                             logger.debug(f"Performance check at tick {self.tick}: "
                                        f"Average {frame_count/(self.tick/100):.1f} FPS over last period")
                 
-                self.renderer.render(self.world)
+                # Always render, whether paused or not
+                self.renderer.render(self.world, self.stats)
                 self.clock.tick(Config.FPS)
                 frame_count += 1
                 
@@ -134,6 +143,18 @@ class Simulation:
                     break
         
         logger.info(f"Simulation ended after {self.tick} ticks and {frame_count} frames")
+        
+        # Log final statistics summary
+        summary = self.stats.get_summary()
+        logger.info("=== Final Statistics ===")
+        logger.info(f"Total runtime: {summary['runtime']:.1f} seconds")
+        logger.info(f"Total births: {summary['total_births']}")
+        logger.info(f"Total deaths: {summary['total_deaths']}")
+        logger.info(f"Total mutations: {summary['total_mutations']}")
+        logger.info(f"Final population: {summary['population']['cells']} cells")
+        logger.info(f"Genome diversity: {summary['genome_diversity']} unique genomes")
+        logger.info("========================")
+        
         pygame.quit()
         logger.debug("Pygame shut down cleanly")
     
@@ -154,6 +175,15 @@ class Simulation:
                         self.save_world()
                     except Exception as e:
                         logger.error(f"Failed to save world: {e}")
+                elif event.key == pygame.K_t:
+                    # Toggle stats view
+                    self.renderer.show_stats = not self.renderer.show_stats
+                    mode = "stats" if self.renderer.show_stats else "simulation"
+                    logger.info(f"Switched to {mode} view")
+                    print(f"Viewing: {mode}")
+                elif event.key == pygame.K_F11:
+                    # Toggle fullscreen
+                    self.renderer.toggle_fullscreen()
                 elif event.key == pygame.K_r:
                     old_zoom = self.renderer.camera.zoom
                     self.renderer.camera.zoom *= 1.2
@@ -163,34 +193,36 @@ class Simulation:
                     self.renderer.camera.zoom /= 1.2
                     logger.debug(f"Zoom out: {old_zoom:.2f} -> {self.renderer.camera.zoom:.2f}")
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:  # Left click
-                    logger.debug(f"Camera drag started at {event.pos}")
-                    self.renderer.camera.dragging = True
-                    self.renderer.camera.drag_start = event.pos
-                # NEW: Middle mouse button for reset zoom
-                elif event.button == 2:  # Middle click
-                    old_zoom = self.renderer.camera.zoom
-                    self.renderer.camera.zoom = 1.0
-                    logger.debug(f"Zoom reset: {old_zoom:.2f} -> 1.0")
-                # NEW: Handle scroll wheel zoom
-                elif event.button == 4:  # Scroll up
-                    old_zoom = self.renderer.camera.zoom
-                    self.renderer.camera.zoom *= 1.1
-                    # Clamp zoom to reasonable limits
-                    self.renderer.camera.zoom = min(self.renderer.camera.zoom, 10.0)
-                    logger.debug(f"Scroll zoom in: {old_zoom:.2f} -> {self.renderer.camera.zoom:.2f}")
-                elif event.button == 5:  # Scroll down
-                    old_zoom = self.renderer.camera.zoom
-                    self.renderer.camera.zoom /= 1.1
-                    # Clamp zoom to reasonable limits
-                    self.renderer.camera.zoom = max(self.renderer.camera.zoom, 0.1)
-                    logger.debug(f"Scroll zoom out: {old_zoom:.2f} -> {self.renderer.camera.zoom:.2f}")
+                # Don't process mouse events in stats view
+                if not self.renderer.show_stats:
+                    if event.button == 1:  # Left click
+                        logger.debug(f"Camera drag started at {event.pos}")
+                        self.renderer.camera.dragging = True
+                        self.renderer.camera.drag_start = event.pos
+                    # NEW: Middle mouse button for reset zoom
+                    elif event.button == 2:  # Middle click
+                        old_zoom = self.renderer.camera.zoom
+                        self.renderer.camera.zoom = 1.0
+                        logger.debug(f"Zoom reset: {old_zoom:.2f} -> 1.0")
+                    # NEW: Handle scroll wheel zoom
+                    elif event.button == 4:  # Scroll up
+                        old_zoom = self.renderer.camera.zoom
+                        self.renderer.camera.zoom *= 1.1
+                        # Clamp zoom to reasonable limits
+                        self.renderer.camera.zoom = min(self.renderer.camera.zoom, 10.0)
+                        logger.debug(f"Scroll zoom in: {old_zoom:.2f} -> {self.renderer.camera.zoom:.2f}")
+                    elif event.button == 5:  # Scroll down
+                        old_zoom = self.renderer.camera.zoom
+                        self.renderer.camera.zoom /= 1.1
+                        # Clamp zoom to reasonable limits
+                        self.renderer.camera.zoom = max(self.renderer.camera.zoom, 0.1)
+                        logger.debug(f"Scroll zoom out: {old_zoom:.2f} -> {self.renderer.camera.zoom:.2f}")
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
                     logger.debug("Camera drag ended")
                     self.renderer.camera.dragging = False
             elif event.type == pygame.MOUSEMOTION:
-                if self.renderer.camera.dragging:
+                if self.renderer.camera.dragging and not self.renderer.show_stats:
                     dx = event.pos[0] - self.renderer.camera.drag_start[0]
                     dy = event.pos[1] - self.renderer.camera.drag_start[1]
                     old_x, old_y = self.renderer.camera.x, self.renderer.camera.y
@@ -211,6 +243,13 @@ class Simulation:
         try:
             logger.info(f"Saving world to {filename}")
             world_data = self.world.to_dict()
+            
+            # Add statistics snapshot to saved world
+            world_data['stats_snapshot'] = {
+                'tick': self.tick,
+                'summary': self.stats.get_summary(),
+                'notable_events': list(self.stats.notable_events)
+            }
             
             with open(filename, 'w') as f:
                 json.dump(world_data, f, indent=2)
