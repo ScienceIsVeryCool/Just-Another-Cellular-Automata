@@ -25,6 +25,7 @@ class World:
         self.next_cell_id = 0
         self.next_organism_id = 0
         self.dna_parser = DNAParser()
+        self.tick_counter = 0  # NEW: For energy drain timing
         
         logger.debug("World data structures initialized")
         self._setup_default_environment()
@@ -42,11 +43,14 @@ class World:
             wall_count += 2
         logger.debug(f"Created {wall_count} wall segments")
         
-        # Food clusters
+        # Enhanced food clusters - MORE FOOD
         logger.debug("Spawning initial food clusters")
-        self.food_system.spawn_gaussian_cluster(200, 200, 50, 0.3)
-        self.food_system.spawn_gaussian_cluster(800, 800, 50, 0.3)
-        self.food_system.spawn_gaussian_cluster(500, 500, 100, 0.2)
+        self.food_system.spawn_gaussian_cluster(200, 200, 60, 0.4)  # Larger, denser
+        self.food_system.spawn_gaussian_cluster(800, 800, 60, 0.4)  # Larger, denser
+        self.food_system.spawn_gaussian_cluster(500, 500, 80, 0.3)  # Larger spread
+        # Add more clusters
+        self.food_system.spawn_gaussian_cluster(100, 600, 40, 0.3)
+        self.food_system.spawn_gaussian_cluster(700, 200, 40, 0.3)
         
         total_food = len(self.food_system.food_energy)
         logger.info(f"Default environment setup complete: {wall_count} walls, {total_food} food items")
@@ -76,9 +80,9 @@ class World:
                 logger.debug(f"Created organism {self.next_organism_id} with color {organism.color}")
                 self.next_organism_id += 1
                 
-                # Create initial cell
+                # Create initial cell with FIXED energy calculation
                 cell = Cell(self.next_cell_id, spawn_x, spawn_y, organism.id)
-                cell.energy = Config.STARTING_ENERGY - len(genome)
+                cell.energy = Config.STARTING_ENERGY - len(genome)  # Still subtract genome length once
                 self.cells[self.next_cell_id] = cell
                 organism.cell_ids.add(cell.id)
                 
@@ -100,6 +104,10 @@ class World:
         """Main update loop"""
         initial_cells = len(self.cells)
         initial_organisms = len(self.organisms)
+        self.tick_counter += 1
+        
+        # NEW: Only drain energy every ENERGY_DRAIN_INTERVAL ticks
+        should_drain_energy = (self.tick_counter % Config.ENERGY_DRAIN_INTERVAL == 0)
         
         # Update cells
         dead_cells = []
@@ -107,6 +115,7 @@ class World:
         moved_count = 0
         ate_food_count = 0
         ate_cell_count = 0
+        energy_drained_count = 0
         
         for cell_id, cell in list(self.cells.items()):
             organism = self.organisms.get(cell.organism_id)
@@ -115,11 +124,15 @@ class World:
                 dead_cells.append(cell_id)
                 continue
                 
-            # Energy drain
-            energy_before = cell.energy
-            cell.energy -= len(organism.genome)
-            logger.debug(f"Cell {cell_id} energy drain: {energy_before} -> {cell.energy} "
-                        f"(genome length: {len(organism.genome)})")
+            # NEW: Energy drain only happens periodically
+            if should_drain_energy:
+                energy_before = cell.energy
+                # FIXED: Much gentler energy drain
+                energy_cost = len(organism.genome) * Config.GENOME_ENERGY_COST
+                cell.energy -= energy_cost
+                energy_drained_count += 1
+                logger.debug(f"Cell {cell_id} energy drain: {energy_before} -> {cell.energy} "
+                            f"(cost: {energy_cost})")
             
             # Execute behaviors
             if "CanMove" in organism.traits:
@@ -166,12 +179,17 @@ class World:
         final_cells = len(self.cells)
         final_organisms = len(self.organisms)
         
-        if death_count > 0 or reproduced_count > 0 or moved_count > 0:
-            logger.debug(f"Update summary - Cells: {initial_cells}->{final_cells} "
-                        f"(+{reproduced_count} births, -{death_count} deaths), "
-                        f"Organisms: {initial_organisms}->{final_organisms}, "
-                        f"Actions: {moved_count} moves, {ate_food_count} food eaten, "
-                        f"{ate_cell_count} cells eaten")
+        if death_count > 0 or reproduced_count > 0 or moved_count > 0 or should_drain_energy:
+            summary = (f"Tick {self.tick_counter} - Cells: {initial_cells}->{final_cells} "
+                      f"(+{reproduced_count} births, -{death_count} deaths), "
+                      f"Organisms: {initial_organisms}->{final_organisms}, "
+                      f"Actions: {moved_count} moves, {ate_food_count} food eaten, "
+                      f"{ate_cell_count} cells eaten")
+            
+            if should_drain_energy:
+                summary += f", {energy_drained_count} cells drained energy"
+            
+            logger.debug(summary)
     
     def _move_cell(self, cell):
         """Move cell in random direction"""
@@ -269,8 +287,8 @@ class World:
         
         logger.debug(f"Killing cell {cell_id} at ({cell.x}, {cell.y}) with {cell.energy} energy")
             
-        # Leave decay food
-        self.food_system.spawn_food(cell.x, cell.y, 5)
+        # Leave decay food - ENHANCED
+        self.food_system.spawn_food(cell.x, cell.y, Config.DECAY_FOOD_ENERGY)
         
         # Remove from spatial hash
         self._remove_from_spatial_hash(cell)

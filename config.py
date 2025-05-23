@@ -13,15 +13,18 @@ class Config:
     SCREEN_HEIGHT = 600
     FPS = 30
     
-    # Energy
-    STARTING_ENERGY = 100
-    MOVEMENT_COST = 2
-    REPRODUCTION_COST = 50
-    REPRODUCTION_THRESHOLD = 150
+    # Energy System - FIXED FOR SURVIVAL
+    STARTING_ENERGY = 200  # Increased from 100
+    ENERGY_DRAIN_INTERVAL = 30  # NEW: Drain energy every 30 ticks (once per second at 30 FPS)
+    GENOME_ENERGY_COST = 1  # NEW: Reduced from len(genome) to 1 per genome length
+    MOVEMENT_COST = 1  # Reduced from 2
+    REPRODUCTION_COST = 80  # Increased from 50 to make reproduction more strategic
+    REPRODUCTION_THRESHOLD = 250  # Increased from 150
     
-    # Food
-    FOOD_ENERGY = 10
-    FOOD_REGEN_RATE = 0.02
+    # Food System - ENHANCED
+    FOOD_ENERGY = 25  # Increased from 10
+    FOOD_REGEN_RATE = 0.05  # Increased from 0.02
+    DECAY_FOOD_ENERGY = 15  # NEW: Energy from cell death (was hardcoded to 5)
     
     # DNA
     MUTATION_RATE = 0.01

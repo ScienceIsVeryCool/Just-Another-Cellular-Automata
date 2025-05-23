@@ -3,6 +3,7 @@ import numpy as np
 import logging
 from scipy.sparse import dok_matrix
 import random
+from config import Config
 
 logger = logging.getLogger('food')
 
@@ -30,7 +31,7 @@ class FoodSystem:
                 prob = density * np.exp(-dist_sq / (2 * spread**2))
                 
                 if random.random() < prob:
-                    self.spawn_food(x, y, 10)
+                    self.spawn_food(x, y, Config.FOOD_ENERGY)  # Use config value
                     food_spawned += 1
         
         logger.info(f"Gaussian cluster spawning complete: {food_spawned} food items created")
@@ -63,14 +64,16 @@ class FoodSystem:
         return 0
     
     def regenerate(self):
-        """Conway-inspired food regeneration"""
+        """Conway-inspired food regeneration with enhanced rate"""
         logger.debug("Starting food regeneration cycle")
         
         new_food = []
         attempts = 0
         
-        # Check random sample of empty cells
-        for _ in range(100):
+        # ENHANCED: Check more cells for regeneration
+        check_count = min(200, max(100, len(self.food_energy) // 2))  # Scale with existing food
+        
+        for _ in range(check_count):
             attempts += 1
             x = random.randint(1, self.width-2)
             y = random.randint(1, self.height-2)
@@ -85,16 +88,23 @@ class FoodSystem:
                         if self.food_grid[x+dx, y+dy] == 1:
                             neighbors += 1
                 
-                # Conway rules
-                if neighbors == 2 or neighbors == 3:
-                    if random.random() < 0.1:
-                        new_food.append((x, y))
-                        logger.debug(f"Food regeneration candidate at ({x}, {y}) with {neighbors} neighbors")
+                # ENHANCED: More favorable regeneration rules
+                regeneration_chance = 0
+                if neighbors == 2:
+                    regeneration_chance = Config.FOOD_REGEN_RATE * 0.8  # Slightly lower for 2 neighbors
+                elif neighbors == 3:
+                    regeneration_chance = Config.FOOD_REGEN_RATE  # Full rate for 3 neighbors
+                elif neighbors == 1:
+                    regeneration_chance = Config.FOOD_REGEN_RATE * 0.3  # Small chance for 1 neighbor
+                
+                if regeneration_chance > 0 and random.random() < regeneration_chance:
+                    new_food.append((x, y))
+                    logger.debug(f"Food regeneration candidate at ({x}, {y}) with {neighbors} neighbors")
         
         # Spawn new food
         regenerated_count = 0
         for x, y in new_food:
-            self.spawn_food(x, y, 10)
+            self.spawn_food(x, y, Config.FOOD_ENERGY)
             regenerated_count += 1
         
         if regenerated_count > 0:
@@ -107,7 +117,7 @@ class FoodSystem:
         logger.debug("Converting food system to dictionary")
         
         result = {
-            "food": [(int(x), int(y), self.food_energy.get((x,y), 10)) 
+            "food": [(int(x), int(y), self.food_energy.get((x,y), Config.FOOD_ENERGY)) 
                     for x, y in zip(*self.food_grid.nonzero())]
         }
         

@@ -167,6 +167,24 @@ class Simulation:
                     logger.debug(f"Camera drag started at {event.pos}")
                     self.renderer.camera.dragging = True
                     self.renderer.camera.drag_start = event.pos
+                # NEW: Middle mouse button for reset zoom
+                elif event.button == 2:  # Middle click
+                    old_zoom = self.renderer.camera.zoom
+                    self.renderer.camera.zoom = 1.0
+                    logger.debug(f"Zoom reset: {old_zoom:.2f} -> 1.0")
+                # NEW: Handle scroll wheel zoom
+                elif event.button == 4:  # Scroll up
+                    old_zoom = self.renderer.camera.zoom
+                    self.renderer.camera.zoom *= 1.1
+                    # Clamp zoom to reasonable limits
+                    self.renderer.camera.zoom = min(self.renderer.camera.zoom, 10.0)
+                    logger.debug(f"Scroll zoom in: {old_zoom:.2f} -> {self.renderer.camera.zoom:.2f}")
+                elif event.button == 5:  # Scroll down
+                    old_zoom = self.renderer.camera.zoom
+                    self.renderer.camera.zoom /= 1.1
+                    # Clamp zoom to reasonable limits
+                    self.renderer.camera.zoom = max(self.renderer.camera.zoom, 0.1)
+                    logger.debug(f"Scroll zoom out: {old_zoom:.2f} -> {self.renderer.camera.zoom:.2f}")
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
                     logger.debug("Camera drag ended")

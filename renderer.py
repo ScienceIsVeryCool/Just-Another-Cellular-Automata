@@ -135,13 +135,14 @@ class Renderer:
                     else:
                         logger.warning(f"Cell {cell.id} has invalid organism_id {cell.organism_id}")
             
-            # Render stats
+            # Render stats - UPDATED with new controls
             stats = [
                 f"Cells: {len(world.cells)}",
                 f"Organisms: {len(world.organisms)}",
                 f"Food: {len(world.food_system.food_energy)}",
                 f"Zoom: {self.camera.zoom:.2f}",
-                "SPACE: pause, S: save, R/F: zoom"
+                "SPACE: pause, S: save",
+                "R/F: zoom, Scroll: zoom, Middle: reset zoom"
             ]
             
             y = 10
